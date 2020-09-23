@@ -80,6 +80,9 @@ def catmull_rom(p_x, p_y, res):
 
     return (x_intpol, y_intpol)
 
+def normalize(vec):
+    return vec / np.linalg.norm(vec)
+
 def update(frame, ax, x, y):
     # p.set_offsets(np.array([x[frame], y[frame]]))
     aspect = (y[frame + 1] - y[frame]) / (x[frame + 1] - x[frame])
@@ -90,6 +93,16 @@ def update(frame, ax, x, y):
     ax.add_patch(p)
     return p,
 
+def plot_rad(x, y):
+    rad = []
+    for i in range(len(x) - 1):
+        initial_dir = np.array([0, 1])
+        next_dir = np.array([x[i + 1] - x[i], y[i + 1] - y[i]])
+        _rad = np.arccos(np.dot(initial_dir, normalize(next_dir)))
+        print(_rad)
+        rad.append(_rad)
+    return rad
+
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from matplotlib.animation import FuncAnimation
@@ -97,7 +110,7 @@ if __name__ == '__main__':
     # set the resolution (number of interpolated points between each pair of
     # points, including the start point, but excluding the endpoint of each
     # interval)
-    res = 50
+    res = 5
 
     # generate some random support points
     # p_x = np.arange(-10,11, dtype='float32')
@@ -105,25 +118,35 @@ if __name__ == '__main__':
     # for i in range(len(p_x)):
     #     p_y[i] = np.random.rand() * 20. - 10.
 
-    jsonPath = os.path.join('wp10', '0.json')
-    with open(jsonPath, 'r') as jsonfile:
-        data = np.array(json.load(jsonfile))
+    for path in range(20):
+        jsonPath = os.path.join('wp10', str(path) + '.json')
+        with open(jsonPath, 'r') as jsonfile:
+            data = np.array(json.load(jsonfile))
 
-    p_x = data[:, 0]
-    p_y = data[:, 1]
+        p_x = data[:, 0]
+        p_y = data[:, 1]
 
-    # do the catmull-rom
-    s_x, s_y = catmull_rom(p_x, p_y, res)
+        # do the catmull-rom
+        s_x, s_y = catmull_rom(p_x, p_y, res)
 
-    # fancy plotting
-    fig, ax = plt.subplots()
-    ax.set_aspect('equal', 'box')
+        # fancy plotting
+        fig, ax = plt.subplots(2, 2)
 
-    plt.plot(s_x, s_y)
-    # plt.scatter(s_x, s_y, s=1)
+        ax[0, 1].set_aspect('equal', 'box')
+        # plt.plot(s_x, s_y)
+        ax[0, 1].scatter(s_x, s_y, s=1)
+        # FuncAnimation(fig, update, frames=(len(s_x) - 1), fargs=(ax, s_x, s_y), interval=200, blit=True)
 
-    FuncAnimation(fig, update, frames=(len(s_x) - 1), fargs=(ax, s_x, s_y), interval=20, blit=True)
-    
-    plt.show()
+        s_rad = plot_rad(s_x, s_y) 
+        ax[1, 1].plot(s_rad)
+        # ax[1].scatter(range(len(rad)), rad, s=1)
+
+        ax[0, 0].set_aspect('equal', 'box')
+        ax[0, 0].scatter(p_x, p_y, s=1)
+
+        p_rad = plot_rad(p_x, p_y) 
+        ax[1, 0].plot(p_rad)
+
+        plt.show()
 
 # vim: set ts=4 sw=4 sts=4 expandtab:
