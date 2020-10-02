@@ -99,7 +99,7 @@ def plot_rad(x, y):
         initial_dir = np.array([0, 1])
         next_dir = np.array([x[i + 1] - x[i], y[i + 1] - y[i]])
         _rad = np.arccos(np.dot(initial_dir, normalize(next_dir)))
-        print(_rad)
+        # print(_rad)
         rad.append(_rad)
     return rad
 
