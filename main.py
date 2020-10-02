@@ -18,7 +18,9 @@ def lerp(x, y, rad):
             div = math.ceil(diff / 0.1)
             _i = i + insert_cnt
             r_x = [x[_i - 1] + (x[_i] - x[_i - 1]) / div * (j + 1) for j in range(div - 1)]
-            r_y = [y[_i - 1] + (y[_i] - y[_i - 1]) / div * (j + 1) for j in range(div - 1)]
+            r_y = [y[_i - 1] + (x[_i] - x[_i - 1]) / div * (j + 1) * np.tan((rad[i] - rad[i + 1]) / div * (j + 1)) for j in range(div - 1)]
+            # r_x = [x[_i - 1] + (y[_i] - y[_i - 1]) / div * (j + 1) * np.tan((rad[i] - rad[i + 1]) / div * (j + 1)) for j in range(div - 1)]
+            # r_y = [y[_i - 1] + (y[_i] - y[_i - 1]) / div * (j + 1) for j in range(div - 1)]
             print(x[_i - 1], r_x, x[_i])
             print(y[_i - 1], r_y, y[_i])
             x = np.concatenate((x[:_i + 1], np.array(r_x), x[_i + 1:]))
