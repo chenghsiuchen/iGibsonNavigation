@@ -11,7 +11,7 @@ def offset(x):
     return np.append(x[0] - x[1] + x[0], x)
 
 def offset_xy(xy):
-    return np.concatenate((np.array([xy[0] - xy[1] + xy[0]]), xy, np.array([xy[-1] + xy[-2] - xy[-1]])))
+    return np.concatenate((np.array([xy[0] - xy[1] + xy[0] - [0.1, 0]]), xy, np.array([xy[-1] + xy[-2] - xy[-1]])))
 
 def lerp(x, y, rad):
     insert_cnt = 0
@@ -54,7 +54,6 @@ if __name__ == '__main__':
 
         # catmull-rom
         # s_x, s_y = catmull_rom(p_x, p_y, res)
-        sp_x, sp_y = catmull_rom(p_x, p_y, res)
 
         # centripetal catmull-rom
         p = offset_xy(data)
@@ -66,6 +65,13 @@ if __name__ == '__main__':
         # u = np.linspace(0, 1, 50)
         # s_x, s_y = np.array(splev(u, tck))
 
+        # discrete BSpline
+        # tck_x, u_x = splprep([p_t, p_x], k=3)
+        # tck_y, u_y = splprep([p_t, p_y], k=3)
+        # u = np.linspace(0, 1, 50)
+        # _, s_x = np.array(splev(u, tck_x))
+        # _, s_y = np.array(splev(u, tck_y))
+
         # bilinear interpolate
         # f = interp1d(p_x, p_y)
         # s_x = np.linspace(0, 4, 50)
@@ -76,21 +82,14 @@ if __name__ == '__main__':
         # s_t = np.linspace(0, len(p_t), 50)
 
         s_rad = plot_rad(offset(s_x), offset(s_y))
-        sp_rad = plot_rad(offset(sp_x), offset(sp_y))
-
-        s_drad = plot_drad(s_rad)
+        s_rad = plot_drad(s_rad)
 
         # fancy plotting
         fig, ax = plt.subplots(2, 2)
 
-        # ax[0, 0].set_aspect('equal', 'box')
-        # ax[0, 0].scatter(sp_x, sp_y, s=1)
-        # ax[0, 0].scatter(p_x, p_y, s=1)
-
-        # ax[1, 0].plot(sp_rad)
-        ax[1, 0].scatter(range(len(s_drad)), s_drad, s=1)
-
         ax[0, 1].set_aspect('equal', 'box')
+        ax[0, 1].invert_xaxis()
+        ax[0, 1].invert_yaxis()
         ax[0, 1].scatter(s_x, s_y, s=1)
         ax[0, 1].scatter(p_x, p_y, s=1)
          
@@ -98,10 +97,12 @@ if __name__ == '__main__':
         ax[1, 1].scatter(range(len(s_rad)), s_rad, s=1)
 
         ax[0, 0].set_aspect('equal', 'box')
+        ax[0, 0].invert_xaxis()
+        ax[0, 0].invert_yaxis()
         ax[0, 0].scatter(p_x, p_y, s=1)
 
         # ax[1, 0].plot(p_rad)
-        # ax[1, 0].scatter(range(len(p_rad)), p_rad, s=5)
+        ax[1, 0].scatter(range(len(p_rad)), p_rad, s=1)
 
         # fig = plt.figure()
         # ax = fig.gca(projection='3d')
