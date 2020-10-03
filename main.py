@@ -1,4 +1,5 @@
-from catmull_rom_spline import catmull_rom, normalize, plot_rad
+from catmull_rom_spline import catmull_rom, normalize, plot_rad, plot_drad
+from CatmullRomSpline import CatmullRomChain
 from scipy.interpolate import splev, splprep, interp1d, interp2d
 import numpy as np
 import json
@@ -8,6 +9,9 @@ import os
 
 def offset(x):
     return np.append(x[0] - x[1] + x[0], x)
+
+def offset_xy(xy):
+    return np.concatenate((np.array([xy[0] - xy[1] + xy[0]]), xy, np.array([xy[-1] + xy[-2] - xy[-1]])))
 
 def lerp(x, y, rad):
     insert_cnt = 0
@@ -30,13 +34,13 @@ def lerp(x, y, rad):
     return x, y
 
 
-
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
 
-    res = 5
+    res = 50
 
-    for path in range(1):
+    for path in range(20):
         jsonPath = os.path.join('wp10', str(path) + '.json')
         with open(jsonPath, 'r') as jsonfile:
             data = np.array(json.load(jsonfile))
@@ -46,10 +50,16 @@ if __name__ == '__main__':
         p_t = np.arange(len(p_x))
         p_rad = plot_rad(offset(p_x), offset(p_y))
 
-        s_x, s_y = lerp(p_x, p_y, p_rad)
+        # s_x, s_y = lerp(p_x, p_y, p_rad)
 
         # catmull-rom
         # s_x, s_y = catmull_rom(p_x, p_y, res)
+        sp_x, sp_y = catmull_rom(p_x, p_y, res)
+
+        # centripetal catmull-rom
+        p = offset_xy(data)
+        c = CatmullRomChain(p)
+        s_x, s_y = zip(*c)
 
         # BSpline
         # tck, u = splprep([p_x, p_y], k=3)
@@ -66,21 +76,35 @@ if __name__ == '__main__':
         # s_t = np.linspace(0, len(p_t), 50)
 
         s_rad = plot_rad(offset(s_x), offset(s_y))
+        sp_rad = plot_rad(offset(sp_x), offset(sp_y))
+
+        s_drad = plot_drad(s_rad)
 
         # fancy plotting
         fig, ax = plt.subplots(2, 2)
+
+        # ax[0, 0].set_aspect('equal', 'box')
+        # ax[0, 0].scatter(sp_x, sp_y, s=1)
+        # ax[0, 0].scatter(p_x, p_y, s=1)
+
+        # ax[1, 0].plot(sp_rad)
+        ax[1, 0].scatter(range(len(s_drad)), s_drad, s=1)
 
         ax[0, 1].set_aspect('equal', 'box')
         ax[0, 1].scatter(s_x, s_y, s=1)
         ax[0, 1].scatter(p_x, p_y, s=1)
          
-        ax[1, 1].plot(s_rad)
-        ax[1, 1].scatter(range(len(s_rad)), s_rad, s=5)
+        # ax[1, 1].plot(s_rad)
+        ax[1, 1].scatter(range(len(s_rad)), s_rad, s=1)
 
         ax[0, 0].set_aspect('equal', 'box')
         ax[0, 0].scatter(p_x, p_y, s=1)
 
-        ax[1, 0].plot(p_rad)
-        ax[1, 0].scatter(range(len(p_rad)), p_rad, s=5)
+        # ax[1, 0].plot(p_rad)
+        # ax[1, 0].scatter(range(len(p_rad)), p_rad, s=5)
+
+        # fig = plt.figure()
+        # ax = fig.gca(projection='3d')
+        # ax.plot3D(s_x, s_y, range(len(s_x)))
 
         plt.show()

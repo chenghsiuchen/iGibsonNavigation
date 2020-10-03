@@ -103,6 +103,12 @@ def plot_rad(x, y):
         rad.append(_rad)
     return rad
 
+def plot_drad(rad):
+    d = []
+    for i in range(len(rad) - 1):
+        d.append(rad[i + 1] - rad[i])
+    return d
+
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from matplotlib.animation import FuncAnimation
