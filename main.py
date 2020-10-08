@@ -1,11 +1,13 @@
 from catmull_rom_spline import catmull_rom, normalize, plot_rad, plot_drad
 from CatmullRomSpline import CatmullRomChain
-from scipy.interpolate import splev, splprep, interp1d, interp2d
+from scipy.interpolate import splev, splprep, CubicSpline
+from scipy.integrate import odeint
 import numpy as np
 import json
 import math
 import io
 import os
+from geomdl import BSpline, fitting
 
 def offset(x):
     return np.append(x[0] - x[1] + x[0], x)
@@ -13,26 +15,11 @@ def offset(x):
 def offset_xy(xy):
     return np.concatenate((np.array([xy[0] - xy[1] + xy[0] - [0.1, 0]]), xy, np.array([xy[-1] + xy[-2] - xy[-1]])))
 
-def lerp(x, y, rad):
-    insert_cnt = 0
-    for i in range(len(rad) - 1):
-        diff = abs(rad[i] - rad[i + 1])
-        # print(i, rad[i], rad[i+1], diff)
-        if diff > 0.3:
-            div = math.ceil(diff / 0.1)
-            _i = i + insert_cnt
-            r_x = [x[_i - 1] + (x[_i] - x[_i - 1]) / div * (j + 1) for j in range(div - 1)]
-            r_y = [y[_i - 1] + (x[_i] - x[_i - 1]) / div * (j + 1) * np.tan((rad[i] - rad[i + 1]) / div * (j + 1)) for j in range(div - 1)]
-            # r_x = [x[_i - 1] + (y[_i] - y[_i - 1]) / div * (j + 1) * np.tan((rad[i] - rad[i + 1]) / div * (j + 1)) for j in range(div - 1)]
-            # r_y = [y[_i - 1] + (y[_i] - y[_i - 1]) / div * (j + 1) for j in range(div - 1)]
-            print(x[_i - 1], r_x, x[_i])
-            print(y[_i - 1], r_y, y[_i])
-            x = np.concatenate((x[:_i + 1], np.array(r_x), x[_i + 1:]))
-            y = np.concatenate((y[:_i + 1], np.array(r_y), y[_i + 1:]))
-            insert_cnt += len(r_x)
-
-    return x, y
-
+def clothoid_ode_rhs(state, s, kappa0, kappa1):
+    x, y, theta = state[0], state[1], state[2]
+    return np.array([np.cos(theta), np.sin(theta), kappa0 + kappa1*s])
+def eval_clothoid(x0,y0,theta0, kappa0, kappa1, s):
+    return odeint(clothoid_ode_rhs, np.array([x0,y0,theta0]), s, (kappa0, kappa1))
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
@@ -40,7 +27,7 @@ if __name__ == '__main__':
 
     res = 50
 
-    for path in range(20):
+    for path in range(1):
         jsonPath = os.path.join('wp10', str(path) + '.json')
         with open(jsonPath, 'r') as jsonfile:
             data = np.array(json.load(jsonfile))
@@ -56,50 +43,50 @@ if __name__ == '__main__':
         # s_x, s_y = catmull_rom(p_x, p_y, res)
 
         # centripetal catmull-rom
-        p = offset_xy(data)
-        c = CatmullRomChain(p)
-        s_x, s_y = zip(*c)
+        # p = offset_xy(data)
+        # c = CatmullRomChain(p)
+        # s_x, s_y = zip(*c)
 
         # BSpline
-        # tck, u = splprep([p_x, p_y], k=3)
-        # u = np.linspace(0, 1, 50)
-        # s_x, s_y = np.array(splev(u, tck))
-
-        # discrete BSpline
         # tck_x, u_x = splprep([p_t, p_x], k=3)
         # tck_y, u_y = splprep([p_t, p_y], k=3)
         # u = np.linspace(0, 1, 50)
         # _, s_x = np.array(splev(u, tck_x))
         # _, s_y = np.array(splev(u, tck_y))
 
-        # bilinear interpolate
-        # f = interp1d(p_x, p_y)
-        # s_x = np.linspace(0, 4, 50)
-        # s_y = f(s_x)
+        # cubic spline
+        # cs_x = CubicSpline(p_t, p_x)
+        # cs_y = CubicSpline(p_t, p_y)
+        # u = np.linspace(0, p_t[-1], 500)
+        # s_x = cs_x(u)
+        # s_y = cs_y(u)
 
-        # bicubic interepolate
-        # f = interp2d(p_t, p_x, p_y, kind='cubic')
-        # s_t = np.linspace(0, len(p_t), 50)
+        # NURBS
+        crv = fitting.interpolate_curve(data.tolist(), 3)
+        u = np.linspace(0, 1, 500)
+        pts = np.array(crv.evaluate_list(u))
+        s_x = pts[:, 0]
+        s_y = pts[:, 1]
+
+        # clothoid
+
 
         s_rad = plot_rad(offset(s_x), offset(s_y))
-        s_rad = plot_drad(s_rad)
+        s_drad = plot_drad(s_rad)
 
         # fancy plotting
         fig, ax = plt.subplots(2, 2)
 
-        ax[0, 1].set_aspect('equal', 'box')
-        ax[0, 1].invert_xaxis()
-        ax[0, 1].invert_yaxis()
-        ax[0, 1].scatter(s_x, s_y, s=1)
-        ax[0, 1].scatter(p_x, p_y, s=1)
-         
-        # ax[1, 1].plot(s_rad)
-        ax[1, 1].scatter(range(len(s_rad)), s_rad, s=1)
-
         ax[0, 0].set_aspect('equal', 'box')
         ax[0, 0].invert_xaxis()
         ax[0, 0].invert_yaxis()
+        ax[0, 0].scatter(s_x, s_y, s=1)
         ax[0, 0].scatter(p_x, p_y, s=1)
+
+        ax[0, 1].scatter(range(len(s_drad)), s_drad, s=1)
+         
+        # ax[1, 1].plot(s_rad)
+        ax[1, 1].scatter(range(len(s_rad)), s_rad, s=1)
 
         # ax[1, 0].plot(p_rad)
         ax[1, 0].scatter(range(len(p_rad)), p_rad, s=1)
