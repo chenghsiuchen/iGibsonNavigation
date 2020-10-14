@@ -1,6 +1,6 @@
 from catmull_rom_spline import catmull_rom, normalize, plot_rad, plot_drad
 from CatmullRomSpline import CatmullRomChain
-from scipy.interpolate import splev, splprep, CubicSpline
+from scipy.interpolate import splev, splprep, CubicSpline, interp1d
 from scipy.integrate import odeint
 import numpy as np
 import json
@@ -33,6 +33,7 @@ def smooth_filter(p_x, p_y):
     for i in range(size, len(p_x) - size, 1):
         new_x = 0
         new_y = 0
+        # constraint delta x / y
         for j in range(size * 2 + 1):
             idx = j - size
             new_x += p_x[i + idx]
@@ -40,6 +41,12 @@ def smooth_filter(p_x, p_y):
 
         new_x /= (size * 2 + 1)
         new_y /= (size * 2 + 1)
+
+        # vec = np.array([p_x[i] - new_x, p_y[i] - new_y])
+        # if np.linalg.norm(vec) > 0.1:
+        #     new_vec = vec / np.linalg.norm(vec) * 0.1
+        #     new_x += new_vec[0]
+        #     new_y += new_vec[1]
 
         x.append(new_x)
         y.append(new_y)
@@ -56,7 +63,7 @@ if __name__ == '__main__':
 
     res = 50
 
-    for path in range(20):
+    for path in range(5):
         jsonPath = os.path.join('wp10', str(path) + '.json')
         with open(jsonPath, 'r') as jsonfile:
             data = np.array(json.load(jsonfile))
@@ -72,25 +79,31 @@ if __name__ == '__main__':
         # s_x, s_y = catmull_rom(p_x, p_y, res)
 
         # centripetal catmull-rom
-        # p = offset_xy(data)
-        # c = CatmullRomChain(p)
-        # s_x, s_y = zip(*c)
+        p = offset_xy(data)
+        c = CatmullRomChain(p)
+        s_x, s_y = zip(*c)
 
         # BSpline
-        _p_x, _p_y = smooth_filter(p_x, p_y)
-        tck_x, u_x = splprep([p_t, p_x], k=3)
-        tck_y, u_y = splprep([p_t, p_y], k=3)
-        u = np.linspace(0, 1, 50)
-        _, s_x = np.array(splev(u, tck_x))
-        _, s_y = np.array(splev(u, tck_y))
+        # _p_x, _p_y = smooth_filter(p_x, p_y)
+        # tck_x, u_x = splprep([p_t, p_x], k=3)
+        # tck_y, u_y = splprep([p_t, p_y], k=3)
+        # u = np.linspace(0, 1, 50)
+        # _, s_x = np.array(splev(u, tck_x))
+        # _, s_y = np.array(splev(u, tck_y))
 
         # cubic spline
-        # _p_x, _p_y = smooth_filter(p_x, p_y)
-        # cs_x = CubicSpline(p_t, _p_x)
-        # cs_y = CubicSpline(p_t, _p_y)
-        # u = np.linspace(0, p_t[-1], 500)
-        # s_x = cs_x(u)
-        # s_y = cs_y(u)
+        f_x = interp1d(p_t, p_x)
+        f_y = interp1d(p_t, p_y)
+        _u = np.linspace(0, p_t[-1], len(p_t) * 5)
+        # _p_x, _p_y = smooth_filter(f_x(_u), f_y(_u))
+        
+        _p_x, _p_y = smooth_filter(np.array(s_x), np.array(s_y))
+        _p_t = np.arange(len(_p_x))
+        cs_x = CubicSpline(_p_t, _p_x)
+        cs_y = CubicSpline(_p_t, _p_y)
+        u = np.linspace(0, _p_t[-1], 100)
+        s_x = cs_x(u)
+        s_y = cs_y(u)
 
         # NURBS
         # crv = fitting.interpolate_curve(data.tolist(), 3)
@@ -115,7 +128,8 @@ if __name__ == '__main__':
         ax[0, 0].scatter(p_x, p_y, s=1)
         ax[0, 0].scatter(_p_x, _p_y, s=1)
 
-        ax[0, 1].scatter(range(len(s_drad)), s_drad, s=1)
+        ax[0, 1].scatter(range(len(s_drad)), s_drad, s=5)
+        ax[0, 1].plot(range(len(s_drad)), s_drad)
          
         # ax[1, 1].plot(s_rad)
         ax[1, 1].scatter(range(len(s_rad)), s_rad, s=1)

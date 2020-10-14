@@ -8,6 +8,14 @@ def CatmullRomSpline(P0, P1, P2, P3, nPoints=100):
     # Convert the points to numpy so that we can do array multiplication
     P0, P1, P2, P3 = map(numpy.array, [P0, P1, P2, P3])
 
+    ###################################################
+    # temporary try
+    ###################################################
+    rad = numpy.arccos(numpy.dot(P1 - P0, P2 - P3) / (numpy.linalg.norm(P1 - P0) * numpy.linalg.norm(P2 - P3)))
+    if rad > 0.2:
+        nPoints += 1
+    ###################################################
+
     # Parametric constant: 0.5 for the centripetal spline, 0.0 for the uniform spline, 1.0 for the chordal spline.
     alpha = 0.5
     # Premultiplied power constant for the following tj() function.
@@ -51,7 +59,7 @@ def CatmullRomChain(P):
     # The curve C will contain an array of (x, y) points.
     C = []
     for i in range(sz-3):
-        c = CatmullRomSpline(P[i], P[i+1], P[i+2], P[i+3], 50)
+        c = CatmullRomSpline(P[i], P[i+1], P[i+2], P[i+3], 2)
         if i == 0:
             C.extend(c)
         else:
